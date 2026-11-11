@@ -1,4 +1,5 @@
 import dotenv from 'dotenv'; dotenv.config();
+import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { connectDatabases, sequelize } from './config/databases.js';
 import { User } from './models/sql.js';
@@ -7,8 +8,12 @@ import Product from './models/Product.js';
 await connectDatabases(); await sequelize.sync();
 const sellerEmail = 'seller@gadgethub.demo';
 const customerEmail = 'customer@gadgethub.demo';
-const [seller] = await User.findOrCreate({ where: { email: sellerEmail }, defaults: { name: 'Priya Seller', email: sellerEmail, passwordHash: await bcrypt.hash('secret123', 12), role: 'seller' } });
-await User.findOrCreate({ where: { email: customerEmail }, defaults: { name: 'Arjun Customer', email: customerEmail, passwordHash: await bcrypt.hash('secret123', 12), role: 'customer' } });
+let sellerId = randomUUID();
+if (process.env.NODE_ENV !== 'production') {
+  const [seller] = await User.findOrCreate({ where: { email: sellerEmail }, defaults: { name: 'Priya Seller', email: sellerEmail, passwordHash: await bcrypt.hash('secret123', 12), role: 'seller' } });
+  await User.findOrCreate({ where: { email: customerEmail }, defaults: { name: 'Arjun Customer', email: customerEmail, passwordHash: await bcrypt.hash('secret123', 12), role: 'customer' } });
+  sellerId = seller.id;
+}
 const samples = [
   ['Apple iPhone 15','Smartphones','Apple',69999,79900,'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=900','New'],
   ['Samsung Galaxy S24','Smartphones','Samsung',62999,74999,'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=900','New'],
@@ -24,7 +29,7 @@ const samples = [
   ['GoPro HERO12','Cameras','GoPro',33990,39990,'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=900','New']
 ];
 for (const [name, category, brand, price, mrp, image, condition] of samples) {
-  await Product.findOneAndUpdate({ name }, { $setOnInsert: { name, category, brand, price, mrp, image, condition, sellerId: seller.id, stock: 15, rating: 4.5, warranty: '1 year warranty', description: `${name} — carefully selected by GadgetHub. Explore features, specifications and reliable after-sales support.` } }, { upsert: true, new: true });
+  await Product.findOneAndUpdate({ name }, { $setOnInsert: { name, category, brand, price, mrp, image, condition, sellerId, stock: 15, rating: 4.5, warranty: '1 year warranty', description: `${name} — carefully selected by GadgetHub. Explore features, specifications and reliable after-sales support.` } }, { upsert: true, new: true });
 }
-console.log('Seed complete. Demo accounts: seller@gadgethub.demo and customer@gadgethub.demo — password: secret123');
+console.log(process.env.NODE_ENV === 'production' ? 'Production seed complete.' : 'Seed complete. Demo accounts: seller@gadgethub.demo and customer@gadgethub.demo — password: secret123');
 await sequelize.close(); process.exit(0);

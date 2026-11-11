@@ -1,4 +1,6 @@
 import dotenv from 'dotenv'; dotenv.config();
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -20,6 +22,17 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+if (process.env.NODE_ENV === 'production') {
+  const frontendDist = fileURLToPath(new URL('../../frontend/dist/', import.meta.url));
+  if (!existsSync(new URL('../../frontend/dist/index.html', import.meta.url))) {
+    throw new Error('Frontend build is missing. Build frontend before starting the production server.');
+  }
+  app.use(express.static(frontendDist));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    res.sendFile(fileURLToPath(new URL('../../frontend/dist/index.html', import.meta.url)));
+  });
+}
 app.use((_req, res) => res.status(404).json({ message: 'API route not found.' }));
 app.use((err, _req, res, _next) => {
   console.error(err);
