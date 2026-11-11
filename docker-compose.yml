@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gadgethub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: gadgethub
+      POSTGRES_USER: gadgethub
+      POSTGRES_PASSWORD: gadgethub_dev_password
+    ports: ["5432:5432"]
+    volumes: ["gadgethub_pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gadgethub -d gadgethub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  mongo:
+    image: mongo:7
+    container_name: gadgethub-mongo
+    restart: unless-stopped
+    ports: ["27017:27017"]
+    volumes: ["gadgethub_mongodata:/data/db"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  gadgethub_pgdata:
+  gadgethub_mongodata:
